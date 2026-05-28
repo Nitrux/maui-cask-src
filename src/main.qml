@@ -136,6 +136,7 @@ Maui.ApplicationWindow
             case "battery-charging-040": return "\uEEA1"
             case "battery-charging-020": return "\uEEA1"
             case "power-profile-performance": return "\uF0E7"
+            case "notifications": return "\uF0F3"
             default: return "\uF128"
         }
     }
@@ -257,6 +258,15 @@ Maui.ApplicationWindow
         bridge: valenzBridge
     }
 
+    NotificationsCenter
+    {
+        id: _notificationsCenterPopup
+        parent: Overlay.overlay
+        anchorButton: _notificationsCenterButton
+        rootWindow: root
+        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+    }
+
     CalendarPopup
     {
         id: _calendarPopup
@@ -331,6 +341,22 @@ Maui.ApplicationWindow
 
             SystemTray
             {
+            },
+
+            ToolSeparator
+            {
+                topPadding: 10
+                bottomPadding: 10
+            },
+
+            NotificationsCenterButton
+            {
+                id: _notificationsCenterButton
+                popup: _notificationsCenterPopup
+                useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+                iconName: "notifications"
+                glyphForIcon: root.controlCenterButtonGlyph
+                countText: String(Math.max(0, _notificationsCenterPopup.notificationCount))
             },
 
             ToolSeparator

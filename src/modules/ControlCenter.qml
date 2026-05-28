@@ -34,6 +34,32 @@ Dialog
     property bool _dndEnabled: false
     property bool _nightLightEnabled: true
     property int _geometryRevision: 0
+    readonly property real _targetY:
+    {
+        const overlayItem = controlCenter.overlayItem
+        if (!overlayItem)
+            return 0
+
+        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
+        if (anchorButton)
+        {
+            const p = _anchorPointInOverlay(0, anchorButton.height)
+            if (p)
+                targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+
+        return targetY
+    }
+    readonly property real _availableHeightFromAnchor:
+    {
+        const overlayItem = controlCenter.overlayItem
+        if (!overlayItem)
+            return _panel.implicitHeight
+
+        const minY = _margin
+        const startY = Math.max(minY, _targetY)
+        return Math.max(0, overlayItem.height - startY - _margin)
+    }
 
     function _touchGeometryRevision()
     {
@@ -158,7 +184,7 @@ Dialog
     }
 
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
-    height: _panel.implicitHeight
+    height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
     onAboutToShow:
     {
         _touchGeometryRevision()
@@ -196,17 +222,7 @@ Dialog
             return 0
 
         const minY = _margin
-        const maxY = Math.max(minY, overlayItem.height - height - _margin)
-        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-
-        if (anchorButton)
-        {
-            const p = _anchorPointInOverlay(0, anchorButton.height)
-            if (p)
-                targetY = p.y + Maui.Style.space.small + _dropOffset
-        }
-
-        return Math.max(minY, Math.min(maxY, targetY))
+        return Math.max(minY, _targetY)
     }
 
     Connections
@@ -260,14 +276,24 @@ Dialog
             shadowColor: "#80000000"
         }
 
-        ColumnLayout
+        Flickable
         {
-            id: _panelContent
+            id: _panelFlick
             anchors.fill: parent
             anchors.leftMargin: controlCenter._panelInsetX
             anchors.rightMargin: controlCenter._panelInsetX
             anchors.topMargin: controlCenter._panelInsetY
             anchors.bottomMargin: controlCenter._panelInsetY
+            contentWidth: width
+            contentHeight: _panelContent.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            interactive: contentHeight > height
+
+            ColumnLayout
+        {
+            id: _panelContent
+            width: _panelFlick.width
             spacing: Maui.Style.space.small
 
             GridLayout
@@ -706,7 +732,7 @@ Dialog
                             spacing: Maui.Style.space.small
                             Label
                             {
-                                text: "\uf185"
+                                text: "\uf042"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pixelSize: controlCenter._glyphSize
                                 color: Maui.Theme.textColor
@@ -724,7 +750,6 @@ Dialog
                                 font.family: controlCenter._nerdFontFamily
                                 font.pixelSize: controlCenter._glyphSize
                                 color: Maui.Theme.textColor
-                                opacity: 0.65
                             }
                         }
                     }
@@ -793,6 +818,7 @@ Dialog
                         }
                 }
             }
+        }
         }
     }
 }

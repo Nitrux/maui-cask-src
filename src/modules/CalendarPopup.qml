@@ -26,6 +26,28 @@ Dialog
     readonly property color _panelColor: Maui.Theme.backgroundColor
     readonly property int _preferredPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 18
     readonly property int _preferredPanelHeight: Maui.Handy.isMobile ? _baseUnit * 15 : _baseUnit * 17
+    readonly property real _targetY:
+    {
+        let targetY = _margin
+        if (anchorItem)
+        {
+            const p = _anchorPointInOverlay(0, anchorItem.height)
+            if (p)
+                targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+
+        return targetY
+    }
+    readonly property real _availableHeightFromAnchor:
+    {
+        const overlay = calendarPopup.overlayItem
+        if (!overlay)
+            return _preferredPanelHeight
+
+        const minY = _margin
+        const startY = Math.max(minY, _targetY)
+        return Math.max(0, overlay.height - startY - _margin)
+    }
 
     Maui.Theme.colorSet: Maui.Theme.View
 
@@ -141,15 +163,7 @@ Dialog
     }
     height:
     {
-        const overlay = calendarPopup.overlayItem
-        if (!overlay)
-            return _preferredPanelHeight
-
-        const available = Math.max(0, overlay.height - (_margin * 2))
-        if (available <= 0)
-            return _preferredPanelHeight
-
-        return Math.min(_preferredPanelHeight, available)
+        return Math.min(_preferredPanelHeight, _availableHeightFromAnchor)
     }
     onAboutToShow:
     {
@@ -187,16 +201,8 @@ Dialog
         if (!overlay)
             return _margin
 
-        if (!anchorItem)
-            return _margin
-
         const minY = _margin
-        const maxY = Math.max(minY, overlay.height - height - _margin)
-        const p = _anchorPointInOverlay(0, anchorItem.height)
-        if (p)
-            return Math.max(minY, Math.min(maxY, p.y + Maui.Style.space.small + _dropOffset))
-
-        return minY
+        return Math.max(minY, _targetY)
     }
 
     Connections

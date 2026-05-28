@@ -34,6 +34,8 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/CalendarPopup.qml
     modules/SystemTray.qml
     modules/ControlCenterButton.qml
+    modules/NotificationsCenter.qml
+    modules/NotificationsCenterButton.qml
     RESOURCES
     assets/cover.png)
 
