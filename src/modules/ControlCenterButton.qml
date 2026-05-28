@@ -19,6 +19,8 @@ ToolButton
     property string powerProfileIconName
     property var glyphForIcon
     property var glyphColorForKind
+    property int reopenGuardMs: 180
+    property double _lastClosedAtMs: -1
     readonly property bool popupVisible: controlCenterButton.popup && controlCenterButton.popup.visible
     readonly property color activeContentColor: (controlCenterButton.down || controlCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
@@ -32,14 +34,30 @@ ToolButton
             return
 
         if (controlCenterButton.popup.visible)
+        {
             controlCenterButton.popup.close()
-        else
-            controlCenterButton.popup.open()
+            return
+        }
+
+        if (_lastClosedAtMs >= 0 && (Date.now() - _lastClosedAtMs) < reopenGuardMs)
+            return
+
+        controlCenterButton.popup.open()
     }
 
     onClicked:
     {
         togglePopup()
+    }
+
+    Connections
+    {
+        target: controlCenterButton.popup
+
+        function onClosed()
+        {
+            controlCenterButton._lastClosedAtMs = Date.now()
+        }
     }
 
     contentItem: RowLayout
@@ -185,7 +203,6 @@ ToolButton
                     visible: controlCenterButton.volumePercentageText.length > 0
                     badgeText: controlCenterButton.volumePercentageText
                     bridge: null
-                    onClicked: controlCenterButton.togglePopup()
                 }
             }
         }
@@ -238,7 +255,6 @@ ToolButton
                     visible: controlCenterButton.batteryPercentageText.length > 0
                     badgeText: controlCenterButton.batteryPercentageText
                     bridge: null
-                    onClicked: controlCenterButton.togglePopup()
                 }
             }
         }

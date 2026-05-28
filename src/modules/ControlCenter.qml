@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls 2.15 as QQC
 import QtQuick.Layouts
 import QtQuick.Effects
 
 import org.mauikit.controls as Maui
+import org.mauikit.system.power as MauiSystem
 
 Dialog
 {
@@ -30,7 +32,6 @@ Dialog
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     property bool _cellularEnabled: false
     property bool _dndEnabled: false
-    property bool _rotationLocked: true
     property bool _nightLightEnabled: true
     property int _geometryRevision: 0
 
@@ -61,6 +62,44 @@ Dialog
             return mappedPoint
 
         return null
+    }
+
+    function _powerProfileLabel(profileName)
+    {
+        switch (profileName)
+        {
+            case "power-saver": return "Power Saver"
+            case "balanced": return "Balanced"
+            case "performance": return "Performance"
+            default: return profileName
+        }
+    }
+
+    function _networkModeTitle()
+    {
+        const state = controlCenter.bridge ? String(controlCenter.bridge.prototypeNetworkState).toLowerCase() : "wireless"
+        return state === "wired" ? "Wired" : "WiFi"
+    }
+
+    function _networkModeSubtitle()
+    {
+        const state = controlCenter.bridge ? String(controlCenter.bridge.prototypeNetworkState).toLowerCase() : "wireless"
+        if (state === "offline")
+            return "Off"
+        if (state === "wired")
+            return "Connected"
+        if (state === "hotspot")
+            return "Hotspot"
+        if (state === "vpn")
+            return "VPN"
+        if (state === "cellular")
+            return "Cellular"
+        return "Home_Network"
+    }
+
+    MauiSystem.PowerProfile
+    {
+        id: _powerProfile
     }
 
     modal: false
@@ -317,6 +356,58 @@ Dialog
 
                             Label
                             {
+                                text: "\uf1eb"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: controlCenter._networkModeTitle(); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._networkModeSubtitle(); color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter.bridge ? controlCenter.bridge.prototypeNetworkState !== "offline" : true
+                                onToggled:
+                                {
+                                    if (!controlCenter.bridge)
+                                        return
+
+                                    if (checked)
+                                    {
+                                        const state = String(controlCenter.bridge.prototypeNetworkState).toLowerCase()
+                                        controlCenter.bridge.prototypeNetworkState = state === "wired" ? "wired" : "wireless"
+                                    }
+                                    else
+                                    {
+                                        controlCenter.bridge.prototypeNetworkState = "offline"
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
                                 text: "\uf294"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pixelSize: controlCenter._glyphSize
@@ -369,7 +460,7 @@ Dialog
 
                             Label
                             {
-                                text: "\uf817"
+                                text: "\uf186"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pixelSize: controlCenter._glyphSize
                                 color: Maui.Theme.textColor
@@ -378,58 +469,16 @@ Dialog
                             ColumnLayout
                             {
                                 spacing: 0
-                                Label { text: "Cellular"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: controlCenter._cellularEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+                                Label { text: "Night Light"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._nightLightEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
                             }
 
                             Item { Layout.fillWidth: true }
 
                             Switch
                             {
-                                checked: controlCenter._cellularEnabled
-                                onToggled: controlCenter._cellularEnabled = checked
-                            }
-                        }
-                    }
-
-                    Maui.SectionItem
-                    {
-                        Layout.fillWidth: true
-                        flat: false
-                        padding: controlCenter._cardPadding
-                        text: ""
-                        label2.text: ""
-
-                        RowLayout
-                        {
-                            Layout.fillWidth: true
-                            spacing: Maui.Style.space.small
-
-                            Label
-                            {
-                                text: "\uf1eb"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
-                                color: Maui.Theme.textColor
-                            }
-
-                            ColumnLayout
-                            {
-                                spacing: 0
-                                Label { text: "WiFi"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: "Home_Network"; color: Maui.Theme.disabledTextColor }
-                            }
-
-                            Item { Layout.fillWidth: true }
-
-                            Switch
-                            {
-                                checked: controlCenter.bridge ? controlCenter.bridge.prototypeNetworkState !== "offline" : true
-                                onToggled:
-                                {
-                                    if (controlCenter.bridge)
-                                        controlCenter.bridge.prototypeNetworkState = checked ? "wireless" : "offline"
-                                }
+                                checked: controlCenter._nightLightEnabled
+                                onToggled: controlCenter._nightLightEnabled = checked
                             }
                         }
                     }
@@ -475,6 +524,7 @@ Dialog
                     Maui.SectionItem
                     {
                         Layout.fillWidth: true
+                        Layout.columnSpan: 2
                         flat: false
                         padding: controlCenter._cardPadding
                         text: ""
@@ -487,7 +537,7 @@ Dialog
 
                             Label
                             {
-                                text: "\uf2f1"
+                                text: "\uf0e7"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pixelSize: controlCenter._glyphSize
                                 color: Maui.Theme.textColor
@@ -495,55 +545,111 @@ Dialog
 
                             ColumnLayout
                             {
+                                Layout.fillWidth: true
                                 spacing: 0
-                                Label { text: "Rotation Lock"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: controlCenter._rotationLocked ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+
+                                Label
+                                {
+                                    text: "Power Profile"
+                                    color: Maui.Theme.textColor
+                                    font.weight: Font.DemiBold
+                                }
+
+                                Label
+                                {
+                                    text: controlCenter._powerProfileLabel(controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfileCurrent
+                                                                                              : _powerProfile.currentProfile)
+                                    color: Maui.Theme.disabledTextColor
+                                }
                             }
 
                             Item { Layout.fillWidth: true }
 
-                            Switch
+                            QQC.ComboBox
                             {
-                                checked: controlCenter._rotationLocked
-                                onToggled: controlCenter._rotationLocked = checked
-                            }
-                        }
-                    }
+                                id: _powerProfileSelector
+                                readonly property string _fallbackLabel: "Select Profile"
+                                readonly property string _longestLabel:
+                                {
+                                    const entries = controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfiles : []
+                                    let longest = _fallbackLabel
 
-                    Maui.SectionItem
-                    {
-                        Layout.fillWidth: true
-                        flat: false
-                        padding: controlCenter._cardPadding
-                        text: ""
-                        label2.text: ""
+                                    for (let i = 0; i < entries.length; ++i)
+                                    {
+                                        const candidate = controlCenter._powerProfileLabel(entries[i])
+                                        if (candidate.length > longest.length)
+                                            longest = candidate
+                                    }
 
-                        RowLayout
-                        {
-                            Layout.fillWidth: true
-                            spacing: Maui.Style.space.small
+                                    return longest
+                                }
+                                readonly property real _contentDrivenWidth: Math.ceil(_powerProfileLongestLabelMetrics.advanceWidth + (Maui.Style.space.big * 3) + Maui.Style.iconSizes.small)
+                                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                Layout.preferredWidth: _contentDrivenWidth
+                                Layout.minimumWidth: _contentDrivenWidth
+                                Layout.maximumWidth: _contentDrivenWidth
+                                currentIndex: -1
+                                enabled: controlCenter.bridge && controlCenter.bridge.controlCenterPowerProfiles.length > 0
+                                model: controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfiles : []
+                                displayText: currentIndex === -1 ? _fallbackLabel : controlCenter._powerProfileLabel(currentText)
+                                TextMetrics
+                                {
+                                    id: _powerProfileLongestLabelMetrics
+                                    text: _powerProfileSelector._longestLabel
+                                    font: _powerProfileSelector.font
+                                }
+                                delegate: ItemDelegate
+                                {
+                                    required property string modelData
+                                    width: ListView.view ? ListView.view.width : _powerProfileSelector.width
+                                    text: controlCenter._powerProfileLabel(modelData)
+                                }
+                                popup.width:
+                                {
+                                    const popupContentWidth = popup.contentItem ? popup.contentItem.implicitWidth : 0
+                                    const popupFrameWidth = popup.leftPadding + popup.rightPadding
+                                    return Math.max(_powerProfileSelector.width, popupContentWidth + popupFrameWidth)
+                                }
+                                Component.onCompleted:
+                                {
+                                    if (!controlCenter.bridge)
+                                        return
 
-                            Label
-                            {
-                                text: "\uf186"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
-                                color: Maui.Theme.textColor
-                            }
+                                    const idx = model.indexOf(controlCenter.bridge.controlCenterPowerProfileCurrent)
+                                    currentIndex = idx
+                                }
+                                Connections
+                                {
+                                    target: controlCenter.bridge
+                                    enabled: !!controlCenter.bridge
 
-                            ColumnLayout
-                            {
-                                spacing: 0
-                                Label { text: "Night Light"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: controlCenter._nightLightEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
-                            }
+                                    function onControlCenterPowerProfilesChanged()
+                                    {
+                                        if (!controlCenter.bridge)
+                                            return
 
-                            Item { Layout.fillWidth: true }
+                                        const idx = _powerProfileSelector.model.indexOf(controlCenter.bridge.controlCenterPowerProfileCurrent)
+                                        _powerProfileSelector.currentIndex = idx
+                                    }
 
-                            Switch
-                            {
-                                checked: controlCenter._nightLightEnabled
-                                onToggled: controlCenter._nightLightEnabled = checked
+                                    function onControlCenterPowerProfileCurrentChanged()
+                                    {
+                                        if (!controlCenter.bridge)
+                                            return
+
+                                        const idx = _powerProfileSelector.model.indexOf(controlCenter.bridge.controlCenterPowerProfileCurrent)
+                                        _powerProfileSelector.currentIndex = idx
+                                    }
+                                }
+                                onActivated:
+                                {
+                                    if (currentIndex >= 0)
+                                    {
+                                        if (controlCenter.bridge)
+                                            controlCenter.bridge.controlCenterPowerProfileCurrent = currentText
+                                        _powerProfile.changeProfile(currentText)
+                                    }
+                                }
                             }
                         }
                     }

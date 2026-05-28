@@ -26,21 +26,6 @@ Item
         return String(value || "").trim()
     }
 
-    function logTitleMetrics(reason)
-    {
-        console.info("[valenz][window-title]",
-                     reason,
-                     "| title=", displayTitle,
-                     "| titleLen=", displayTitle.length,
-                     "| textWidth=", _focusedWindowMetrics.advanceWidth,
-                     "| implicitWidth=", implicitWidth,
-                     "| actualWidth=", width)
-    }
-
-    Component.onCompleted: logTitleMetrics("completed")
-    onDisplayTitleChanged: logTitleMetrics("title_changed")
-    onWidthChanged: logTitleMetrics("width_changed")
-
     TextMetrics
     {
         id: _focusedWindowMetrics

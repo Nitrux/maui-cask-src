@@ -257,6 +257,14 @@ Maui.ApplicationWindow
         bridge: valenzBridge
     }
 
+    CalendarPopup
+    {
+        id: _calendarPopup
+        parent: Overlay.overlay
+        anchorItem: _weatherClock
+        rootWindow: root
+    }
+
     Maui.PageLayout
     {
         id: _pageLayout
@@ -315,6 +323,12 @@ Maui.ApplicationWindow
         ]
 
         rightContent: [
+            ToolSeparator
+            {
+                topPadding: 10
+                bottomPadding: 10
+            },
+
             SystemTray
             {
             },
@@ -445,10 +459,19 @@ Maui.ApplicationWindow
 
                     WeatherClock
                     {
+                        id: _weatherClock
                         clockText: root.clockText
                         dateText: root.dateText
                         weatherIconName: root.weatherIconName
                         weatherTemperature: root.weatherTemperature
+
+                        TapHandler
+                        {
+                            onTapped:
+                            {
+                                _calendarPopup.toggleFromAnchor()
+                            }
+                        }
                     }
 
                     ToolSeparator

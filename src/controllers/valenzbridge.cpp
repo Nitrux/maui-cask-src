@@ -28,6 +28,8 @@ constexpr auto kControlCenterIconModeKey = "ControlCenter/iconMode";
 constexpr auto kControlCenterPrototypeNetworkStateKey = "ControlCenter/prototypeNetworkState";
 constexpr auto kControlCenterPrototypeBluetoothStateKey = "ControlCenter/prototypeBluetoothState";
 constexpr auto kControlCenterPrototypeVolumeStateKey = "ControlCenter/prototypeVolumeState";
+constexpr auto kControlCenterPowerProfilesKey = "ControlCenter/powerProfiles";
+constexpr auto kControlCenterPowerProfileCurrentKey = "ControlCenter/powerProfileCurrent";
 constexpr auto kControlCenterVolumePercentageKey = "ControlCenter/volumePercentage";
 constexpr auto kControlCenterBatteryStateKey = "ControlCenter/batteryState";
 constexpr auto kControlCenterBatteryPercentageKey = "ControlCenter/batteryPercentage";
@@ -48,6 +50,8 @@ constexpr auto kLegacyControlCenterIconModeKey = "controlCenter/iconMode";
 constexpr auto kLegacyControlCenterPrototypeNetworkStateKey = "controlCenter/prototypeNetworkState";
 constexpr auto kLegacyControlCenterPrototypeBluetoothStateKey = "controlCenter/prototypeBluetoothState";
 constexpr auto kLegacyControlCenterPrototypeVolumeStateKey = "controlCenter/prototypeVolumeState";
+constexpr auto kLegacyControlCenterPowerProfilesKey = "controlCenter/powerProfiles";
+constexpr auto kLegacyControlCenterPowerProfileCurrentKey = "controlCenter/powerProfileCurrent";
 constexpr auto kLegacyControlCenterVolumePercentageKey = "controlCenter/volumePercentage";
 constexpr auto kLegacyControlCenterBatteryStateKey = "controlCenter/batteryState";
 constexpr auto kLegacyControlCenterBatteryPercentageKey = "controlCenter/batteryPercentage";
@@ -109,6 +113,48 @@ QString normalizeBatteryPercentage(const QString &value)
 
     const int bounded = qBound(0, parsed, 100);
     return QStringLiteral("%1%").arg(bounded);
+}
+
+QStringList normalizePowerProfiles(const QVariant &value)
+{
+    QStringList profiles;
+
+    if (value.metaType().id() == QMetaType::QStringList)
+        profiles = value.toStringList();
+    else
+        profiles = value.toString().split(QLatin1Char(','), Qt::SkipEmptyParts);
+
+    QStringList normalized;
+    normalized.reserve(profiles.size());
+
+    for (const QString &profile : profiles)
+    {
+        const QString trimmed = profile.trimmed();
+        if (trimmed.isEmpty() || normalized.contains(trimmed, Qt::CaseInsensitive))
+            continue;
+
+        normalized << trimmed;
+    }
+
+    if (normalized.isEmpty())
+        normalized << QStringLiteral("power-saver") << QStringLiteral("balanced") << QStringLiteral("performance");
+
+    return normalized;
+}
+
+QString normalizeCurrentPowerProfile(const QString &value, const QStringList &profiles)
+{
+    const QString trimmed = value.trimmed();
+    if (trimmed.isEmpty())
+        return profiles.value(0, QStringLiteral("balanced"));
+
+    for (const QString &profile : profiles)
+    {
+        if (profile.compare(trimmed, Qt::CaseInsensitive) == 0)
+            return profile;
+    }
+
+    return profiles.value(0, QStringLiteral("balanced"));
 }
 
 bool normalizeControlCenterBatteryCharging(const QVariant &value)
@@ -418,6 +464,47 @@ void ValenzBridge::setPrototypeVolumeState(const QString &state)
     Q_EMIT prototypeVolumeStateChanged(m_prototypeVolumeState);
 }
 
+QStringList ValenzBridge::controlCenterPowerProfiles() const
+{
+    return m_controlCenterPowerProfiles;
+}
+
+void ValenzBridge::setControlCenterPowerProfiles(const QStringList &profiles)
+{
+    const QStringList normalizedProfiles = normalizePowerProfiles(profiles);
+    const QString normalizedCurrent = normalizeCurrentPowerProfile(m_controlCenterPowerProfileCurrent, normalizedProfiles);
+
+    const bool profilesChanged = m_controlCenterPowerProfiles != normalizedProfiles;
+    const bool currentChanged = m_controlCenterPowerProfileCurrent != normalizedCurrent;
+    if (!profilesChanged && !currentChanged)
+        return;
+
+    m_controlCenterPowerProfiles = normalizedProfiles;
+    m_controlCenterPowerProfileCurrent = normalizedCurrent;
+    persistControlCenterState();
+
+    if (profilesChanged)
+        Q_EMIT controlCenterPowerProfilesChanged(m_controlCenterPowerProfiles);
+    if (currentChanged)
+        Q_EMIT controlCenterPowerProfileCurrentChanged(m_controlCenterPowerProfileCurrent);
+}
+
+QString ValenzBridge::controlCenterPowerProfileCurrent() const
+{
+    return m_controlCenterPowerProfileCurrent;
+}
+
+void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
+{
+    const QString normalized = normalizeCurrentPowerProfile(profile, m_controlCenterPowerProfiles);
+    if (m_controlCenterPowerProfileCurrent == normalized)
+        return;
+
+    m_controlCenterPowerProfileCurrent = normalized;
+    persistControlCenterState();
+    Q_EMIT controlCenterPowerProfileCurrentChanged(m_controlCenterPowerProfileCurrent);
+}
+
 QString ValenzBridge::controlCenterVolumePercentage() const
 {
     return m_controlCenterVolumePercentage;
@@ -578,6 +665,9 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kControlCenterPrototypeNetworkStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeNetworkStateKey), "auto");
     ensureKey(QString::fromLatin1(kControlCenterPrototypeBluetoothStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeBluetoothStateKey), "auto");
     ensureKey(QString::fromLatin1(kControlCenterPrototypeVolumeStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeVolumeStateKey), "auto");
+    ensureKey(QString::fromLatin1(kControlCenterPowerProfilesKey), QString::fromLatin1(kLegacyControlCenterPowerProfilesKey),
+              QStringList { QStringLiteral("power-saver"), QStringLiteral("balanced"), QStringLiteral("performance") });
+    ensureKey(QString::fromLatin1(kControlCenterPowerProfileCurrentKey), QString::fromLatin1(kLegacyControlCenterPowerProfileCurrentKey), "balanced");
     ensureKey(QString::fromLatin1(kControlCenterVolumePercentageKey), QString::fromLatin1(kLegacyControlCenterVolumePercentageKey), "50%");
 
     if (!userSettings.contains(kControlCenterBatteryStateKey))
@@ -628,6 +718,12 @@ void ValenzBridge::initializeConfig()
     m_prototypeNetworkState = normalizePrototypeNetworkState(userSettings.value(kControlCenterPrototypeNetworkStateKey, "auto").toString());
     m_prototypeBluetoothState = normalizePrototypeBluetoothState(userSettings.value(kControlCenterPrototypeBluetoothStateKey, "auto").toString());
     m_prototypeVolumeState = normalizePrototypeVolumeState(userSettings.value(kControlCenterPrototypeVolumeStateKey, "auto").toString());
+    m_controlCenterPowerProfiles = normalizePowerProfiles(userSettings.value(kControlCenterPowerProfilesKey,
+                                                                             QStringList { QStringLiteral("power-saver"),
+                                                                                           QStringLiteral("balanced"),
+                                                                                           QStringLiteral("performance") }));
+    m_controlCenterPowerProfileCurrent = normalizeCurrentPowerProfile(userSettings.value(kControlCenterPowerProfileCurrentKey, "balanced").toString(),
+                                                                      m_controlCenterPowerProfiles);
     m_controlCenterVolumePercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterVolumePercentageKey, "50%").toString());
     m_controlCenterBatteryCharging = normalizeControlCenterBatteryCharging(userSettings.value(kControlCenterBatteryStateKey, "battery"));
     m_controlCenterBatteryPercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterBatteryPercentageKey, "0%").toString());
@@ -696,6 +792,8 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kControlCenterPrototypeNetworkStateKey, m_prototypeNetworkState);
     userSettings.setValue(kControlCenterPrototypeBluetoothStateKey, m_prototypeBluetoothState);
     userSettings.setValue(kControlCenterPrototypeVolumeStateKey, m_prototypeVolumeState);
+    userSettings.setValue(kControlCenterPowerProfilesKey, m_controlCenterPowerProfiles);
+    userSettings.setValue(kControlCenterPowerProfileCurrentKey, m_controlCenterPowerProfileCurrent);
     userSettings.setValue(kControlCenterVolumePercentageKey, m_controlCenterVolumePercentage);
     userSettings.setValue(kControlCenterBatteryStateKey, m_controlCenterBatteryCharging ? "charging" : "battery");
     userSettings.setValue(kControlCenterBatteryPercentageKey, m_controlCenterBatteryPercentage);
