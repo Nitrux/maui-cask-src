@@ -26,6 +26,10 @@ Dialog
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property int notificationCount: _notificationsModel.count
     property int _geometryRevision: 0
+    property bool _clearingAll: false
+    property int clearAllTrigger: 0
+    property int _clearRemainingAnimations: 0
+    readonly property int _clearAllStaggerMs: 45
 
     readonly property real _targetY:
     {
@@ -112,9 +116,28 @@ Dialog
             _notificationsModel.remove(index, 1)
     }
 
+    function _onClearAllCardDismissed()
+    {
+        if (!_clearingAll)
+            return
+
+        _clearRemainingAnimations = Math.max(0, _clearRemainingAnimations - 1)
+
+        if (_clearRemainingAnimations === 0)
+        {
+            _notificationsModel.clear()
+            _clearingAll = false
+        }
+    }
+
     function clearNotifications()
     {
-        _notificationsModel.clear()
+        if (_clearingAll || _notificationsModel.count === 0)
+            return
+
+        _clearRemainingAnimations = _notificationsModel.count
+        _clearingAll = true
+        clearAllTrigger += 1
     }
 
     ListModel
@@ -381,7 +404,7 @@ Dialog
                     {
                         id: _clearAllButton
                         Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
-                        enabled: notificationsCenter.notificationCount > 0
+                        enabled: notificationsCenter.notificationCount > 0 && !notificationsCenter._clearingAll
                         onClicked: notificationsCenter.clearNotifications()
 
                         contentItem: RowLayout
@@ -474,14 +497,27 @@ Dialog
                             required property string actionKey
 
                             property bool _dismissing: false
+                            property int _dismissDelayMs: 0
 
-                            function startDismiss()
+                            function startDismiss(delayMs)
                             {
                                 if (_dismissing)
                                     return
 
                                 _dismissing = true
+                                _dismissDelayMs = Math.max(0, delayMs || 0)
                                 _dismissAnimation.start()
+                            }
+
+                            Connections
+                            {
+                                target: notificationsCenter
+
+                                function onClearAllTriggerChanged()
+                                {
+                                    if (notificationsCenter._clearingAll)
+                                        _notificationCard.startDismiss(index * notificationsCenter._clearAllStaggerMs)
+                                }
                             }
 
                             width: _notificationsColumn.width
@@ -496,29 +532,43 @@ Dialog
                                 border.width: urgencyLevel >= 0 ? 1 : 0
                                 border.color: notificationsCenter._urgencyAccentColor(urgencyLevel)
                             }
-                            ParallelAnimation
+                            SequentialAnimation
                             {
                                 id: _dismissAnimation
 
-                                NumberAnimation
+                                PauseAnimation
                                 {
-                                    target: _notificationCard
-                                    property: "x"
-                                    to: _notificationCard.width + Maui.Style.space.large
-                                    duration: 200
-                                    easing.type: Easing.InOutCubic
+                                    duration: _notificationCard._dismissDelayMs
                                 }
 
-                                NumberAnimation
+                                ParallelAnimation
                                 {
-                                    target: _notificationCard
-                                    property: "opacity"
-                                    to: 0
-                                    duration: 160
-                                    easing.type: Easing.InOutQuad
+                                    NumberAnimation
+                                    {
+                                        target: _notificationCard
+                                        property: "x"
+                                        to: _notificationCard.width + Maui.Style.space.large
+                                        duration: 200
+                                        easing.type: Easing.InOutCubic
+                                    }
+
+                                    NumberAnimation
+                                    {
+                                        target: _notificationCard
+                                        property: "opacity"
+                                        to: 0
+                                        duration: 160
+                                        easing.type: Easing.InOutQuad
+                                    }
                                 }
 
-                                onFinished: notificationsCenter.dismissNotification(index)
+                                onFinished:
+                                {
+                                    if (notificationsCenter._clearingAll)
+                                        notificationsCenter._onClearAllCardDismissed()
+                                    else
+                                        notificationsCenter.dismissNotification(index)
+                                }
                             }
 
                             ColumnLayout
@@ -601,8 +651,8 @@ Dialog
                                             radius: Maui.Style.radiusV
                                             color: _dismissButton.hovered || _dismissButton.down ? Maui.Theme.negativeBackgroundColor : "transparent"
                                         }
-                                        enabled: !_notificationCard._dismissing
-                                        onClicked: _notificationCard.startDismiss()
+                                        enabled: !_notificationCard._dismissing && !notificationsCenter._clearingAll
+                                        onClicked: _notificationCard.startDismiss(0)
                                     }
                                 }
 
