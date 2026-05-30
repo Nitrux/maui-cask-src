@@ -14,7 +14,6 @@ Valenz is a status bar for Nitrux built with MauiKit. Phasellus non eros mollis,
 
 ```
 mauikit (>= 4.0.3)
-mauikit-system (>= 4.0.3)
 qt6 (>= 6.9.2)
 ```
 

@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
 
-#include <QDebug>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -25,14 +24,6 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     ValenzBridge valenzBridge;
-
-    QObject::connect(&valenzBridge, &ValenzBridge::traceRaised, &app,
-                     [](const QString &source, const QString &action, const QString &detail, const QString &timestamp)
-    {
-        qInfo().noquote() << QStringLiteral("[valenz] %1 | source=%2 | action=%3 | detail=%4")
-                                 .arg(timestamp, source, action, detail);
-    });
-
     engine.rootContext()->setContextProperty(QStringLiteral("valenzBridge"), &valenzBridge);
 
     const QUrl url(QStringLiteral("qrc:/app/valenz/main.qml"));

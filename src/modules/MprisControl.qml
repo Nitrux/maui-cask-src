@@ -48,7 +48,7 @@ Item
                 fillMode: Image.PreserveAspectCrop
                 source: (mprisControl.bridge && String(mprisControl.bridge.mediaArtSource || "").trim().length > 0)
                         ? mprisControl.bridge.mediaArtSource
-                        : "qrc:/app/valenz/assets/cover.png"
+                        : ""
                 visible: true
             }
 
@@ -102,7 +102,12 @@ Item
                     {
                         const title = mprisControl.cleanText(mprisControl.bridge ? mprisControl.bridge.mediaTitle : "")
                         const artist = mprisControl.cleanText(mprisControl.bridge ? mprisControl.bridge.mediaArtist : "")
-                        return (title.length > 0 ? title : "No media") + " - " + (artist.length > 0 ? artist : "Unknown artist")
+                        const parts = []
+                        if (title.length > 0)
+                            parts.push(title)
+                        if (artist.length > 0)
+                            parts.push(artist)
+                        return parts.length > 0 ? parts.join(" - ") : "No media"
                     }
                     font.weight: Font.DemiBold
                     color: Maui.Theme.textColor
@@ -173,7 +178,6 @@ Item
                 id: _mediaSecondaryViewport
                 anchors.fill: parent
                 clip: true
-
                 Label
                 {
                     id: _mediaSecondaryText
@@ -187,23 +191,7 @@ Item
                     wrapMode: Text.NoWrap
                     width: _mediaSecondaryViewport.width
                     elide: Text.ElideRight
-                    onTextChanged:
-                    {
-                        opacity = 0.2
-                        _mediaSecondaryFade.restart()
-                    }
                 }
-            }
-
-            NumberAnimation
-            {
-                id: _mediaSecondaryFade
-                target: _mediaSecondaryText
-                property: "opacity"
-                from: 0.2
-                to: 1.0
-                duration: 220
-                easing.type: Easing.OutCubic
             }
         }
 

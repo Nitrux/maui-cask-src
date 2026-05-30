@@ -10,7 +10,7 @@ ToolButton
     property QtObject bridge
     property string badgeText: ""
 
-    text: badgeText.length > 0 ? badgeText : (workspaceBadge.bridge ? String(workspaceBadge.bridge.currentWorkspace) : "1")
+    text: badgeText.length > 0 ? badgeText : (workspaceBadge.bridge ? (String(workspaceBadge.bridge.currentWorkspace) + "/" + String(Math.max(1, workspaceBadge.bridge.workspaceCount))) : "1/1")
     display: ToolButton.TextOnly
     font.bold: true
     font.pointSize: Maui.Style.fontSizes.small

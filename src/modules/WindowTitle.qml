@@ -12,14 +12,18 @@ Item
     readonly property int tabHeight: referenceHeight > 0 ? referenceHeight : _toolButtonHeightProbe.implicitHeight
     readonly property string displayTitle:
     {
-        const focusedTitle = windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
-        return focusedTitle.length > 0 ? focusedTitle : "Focused window title"
+        return windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
     }
+    readonly property bool hasFocusedWindow: displayTitle.length > 0
 
-    implicitWidth: Math.max(
-        Maui.Style.units.gridUnit * 4,
-        _focusedWindowMetrics.advanceWidth + Maui.Style.iconSizes.small + (Maui.Style.space.big * 3))
-    implicitHeight: tabHeight
+    visible: hasFocusedWindow
+
+    implicitWidth: hasFocusedWindow
+                   ? Math.max(
+                         Maui.Style.units.gridUnit * 4,
+                         _focusedWindowMetrics.advanceWidth + Maui.Style.iconSizes.small + (Maui.Style.space.big * 3))
+                   : 0
+    implicitHeight: hasFocusedWindow ? tabHeight : 0
 
     function cleanText(value)
     {

@@ -17,15 +17,21 @@ Maui.ToolActions
     {
         text: "Previous workspace"
         icon.name: "go-previous"
-        enabled: !!workspaceNavigation.bridge && workspaceNavigation.bridge.currentWorkspace > 1
-        onTriggered: workspaceNavigation.bridge.goToPreviousWorkspace()
+        enabled: !!workspaceNavigation.bridge
+        onTriggered:
+        {
+            workspaceNavigation.bridge.goToPreviousWorkspace()
+        }
     }
 
     Action
     {
         text: "Next workspace"
         icon.name: "go-next"
-        enabled: !!workspaceNavigation.bridge && workspaceNavigation.bridge.currentWorkspace < workspaceNavigation.bridge.workspaceCount
-        onTriggered: workspaceNavigation.bridge.goToNextWorkspace()
+        enabled: !!workspaceNavigation.bridge
+        onTriggered:
+        {
+            workspaceNavigation.bridge.goToNextWorkspace()
+        }
     }
 }

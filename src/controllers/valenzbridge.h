@@ -1,8 +1,14 @@
 #pragma once
 
+#include <QByteArray>
 #include <QObject>
 #include <QString>
 #include <QStringList>
+#include <QtGlobal>
+#include <QVariantMap>
+
+class QLocalSocket;
+class QTimer;
 
 class ValenzBridge : public QObject
 {
@@ -75,7 +81,7 @@ public:
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
-    Q_INVOKABLE void setWorkspaceState(int currentWorkspace, int workspaceCount);
+    Q_INVOKABLE bool refreshWorkspaceState();
     Q_INVOKABLE void mediaPreviousTrack();
     Q_INVOKABLE void mediaTogglePlayPause();
     Q_INVOKABLE void mediaNextTrack();
@@ -104,12 +110,33 @@ Q_SIGNALS:
     void controlCenterBatteryChargingChanged(bool charging);
     void controlCenterBatteryPercentageChanged(const QString &value);
 
+private Q_SLOTS:
+    void onMprisPropertiesChanged(const QString &interfaceName, const QVariantMap &changedProperties, const QStringList &invalidatedProperties);
+    void onMprisNameOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner);
+
 private:
     int clampWorkspace(int workspace) const;
     void initializeConfig();
-    void persistWorkspaceState() const;
-    void persistMediaState() const;
-    void persistFocusedWindowState() const;
+    void connectHyprlandEventSocket();
+    void scheduleHyprlandEventSocketReconnect();
+    void handleHyprlandEventData();
+    void handleHyprlandEventLine(const QString &line);
+    bool refreshFocusedWindowState();
+    QStringList mprisServiceNames() const;
+    QString preferredMprisService() const;
+    QVariantMap mprisPlayerProperties(const QString &serviceName) const;
+    QVariantMap mprisPlayerMetadata(const QString &serviceName) const;
+    qint64 mprisPlayerPositionUs(const QString &serviceName) const;
+    QString formatMprisTimeUs(qint64 microseconds) const;
+    QString formatMprisTimestamp(qint64 positionUs, qint64 lengthUs) const;
+    void refreshMprisState();
+    void clearMprisState();
+    void updateMprisPlaybackTicker();
+    void updateMprisTimestampFromTicker();
+    void connectMprisSignalObservers();
+    void updateMprisPropertiesSubscription(const QString &serviceName);
+    void clearMprisPropertiesSubscription();
+    bool invokeMprisPlayerMethod(const QString &method);
     void persistControlCenterState() const;
 
     bool m_enabled = true;
@@ -120,7 +147,7 @@ private:
     QString m_mediaTimestamp;
     QString m_mediaArtSource;
     bool m_mediaPlaying = false;
-    bool m_mprisVisible = true;
+    bool m_mprisVisible = false;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
     QString m_controlCenterIconMode;
@@ -133,4 +160,14 @@ private:
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
     QString m_userConfigPath;
+    QLocalSocket *m_hyprlandEventSocket = nullptr;
+    QByteArray m_hyprlandEventBuffer;
+    QTimer *m_mprisRefreshTimer = nullptr;
+    QTimer *m_mprisPlaybackTimer = nullptr;
+    QString m_mprisServiceName;
+    QString m_mprisPropertiesServiceName;
+    qint64 m_mprisTrackLengthUs = 0;
+    qint64 m_mprisPositionUs = 0;
+    qint64 m_mprisLastPositionUs = 0;
+    qint64 m_mprisLastPositionEpochMs = 0;
 };

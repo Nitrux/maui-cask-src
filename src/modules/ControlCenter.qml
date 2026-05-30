@@ -5,7 +5,6 @@ import QtQuick.Layouts
 import QtQuick.Effects
 
 import org.mauikit.controls as Maui
-import org.mauikit.system.power as MauiSystem
 
 Dialog
 {
@@ -122,12 +121,6 @@ Dialog
             return "Cellular"
         return "Home_Network"
     }
-
-    MauiSystem.PowerProfile
-    {
-        id: _powerProfile
-    }
-
     modal: false
     focus: true
     standardButtons: Dialog.NoButton
@@ -583,8 +576,7 @@ Dialog
 
                                 Label
                                 {
-                                    text: controlCenter._powerProfileLabel(controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfileCurrent
-                                                                                              : _powerProfile.currentProfile)
+                                    text: controlCenter._powerProfileLabel(controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfileCurrent : "balanced")
                                     color: Maui.Theme.disabledTextColor
                                 }
                             }
@@ -673,7 +665,6 @@ Dialog
                                     {
                                         if (controlCenter.bridge)
                                             controlCenter.bridge.controlCenterPowerProfileCurrent = currentText
-                                        _powerProfile.changeProfile(currentText)
                                     }
                                 }
                             }
